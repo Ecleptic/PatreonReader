@@ -127,13 +127,36 @@ check_env_file() {
             warning "Please edit .env with your configuration before deploying."
             info "Required settings:"
             echo "  - API_TOKEN: Your API authentication token"
-            echo "  - PATREON_SESSION_ID: Your Patreon session cookie"
+            echo "  - PATREON_SESSION: Your Patreon session cookie"
+            echo "  - APP_URL: Public URL of your deployment"
             return 1
         else
             warning ".env file not found. Using default configuration."
         fi
     fi
     return 0
+}
+
+load_env_file() {
+    # Load .env file and export variables for Docker Compose
+    if [[ -f ".env" ]]; then
+        info "Loading environment from .env..."
+        set -a  # Automatically export all variables
+        source .env
+        set +a
+        
+        # Show loaded config (without sensitive data)
+        if [[ -n "$APP_URL" ]]; then
+            info "  APP_URL: $APP_URL"
+        fi
+        if [[ -n "$API_TOKEN" ]]; then
+            info "  API_TOKEN: [configured]"
+        fi
+        if [[ -n "$PATREON_SESSION" ]]; then
+            info "  PATREON_SESSION: [configured]"
+        fi
+        info "  SYNC_INTERVAL_HOURS: ${SYNC_INTERVAL_HOURS:-2}"
+    fi
 }
 
 run_checks() {
@@ -229,6 +252,7 @@ cmd_start() {
     header "Starting Services"
     run_checks
     check_env_file || true
+    load_env_file
     
     # Find available port
     local port=$(find_available_port $DEFAULT_PORT)
@@ -366,6 +390,7 @@ cmd_deploy() {
         error "Please configure .env file before deploying"
         exit 1
     fi
+    load_env_file
     
     info "Stopping existing containers..."
     compose down 2>/dev/null || true

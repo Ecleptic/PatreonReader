@@ -1,0 +1,205 @@
+name: Build Android APK
+
+on:
+  # Trigger via PR comment with "/build-apk"
+  issue_comment:
+    types: [created]
+  # Manual trigger from Actions tab
+  workflow_dispatch:
+    inputs:
+      host:
+        description: 'Host URL for the PWA (e.g., your-domain.com)'
+        required: true
+        default: 'example.com'
+      version:
+        description: 'Version name (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  check-comment:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/build-apk'))
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      host: ${{ steps.parse.outputs.host }}
+      version: ${{ steps.parse.outputs.version }}
+    steps:
+      - name: Check if comment triggers build
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.comment.body }}" == *"/build-apk"* ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Parse parameters from comment
+        id: parse
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "host=${{ github.event.inputs.host }}" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            # Parse /build-apk host=example.com version=1.0.0
+            COMMENT="${{ github.event.comment.body }}"
+            HOST=$(echo "$COMMENT" | grep -oP 'host=\K[^\s]+' || echo "example.com")
+            VERSION=$(echo "$COMMENT" | grep -oP 'version=\K[^\s]+' || echo "1.0.0")
+            echo "host=$HOST" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: React to comment
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            })
+
+  build-apk:
+    needs: check-comment
+    if: needs.check-comment.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Accept Android SDK licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Update twa-manifest with parameters
+        run: |
+          HOST="${{ needs.check-comment.outputs.host }}"
+          VERSION="${{ needs.check-comment.outputs.version }}"
+          VERSION_CODE=$(date +%Y%m%d)
+          
+          # Update manifest with host-specific URLs
+          jq --arg host "$HOST" \
+             --arg version "$VERSION" \
+             --argjson versionCode "$VERSION_CODE" \
+             --arg startUrl "https://$HOST/" \
+             --arg iconUrl "https://$HOST/static/icons/icon-512.png" \
+             --arg manifestUrl "https://$HOST/manifest.json" \
+             --arg fullScopeUrl "https://$HOST/" \
+             '.host = $host | .appVersionName = $version | .appVersionCode = $versionCode | .startUrl = $startUrl | .iconUrl = $iconUrl | .maskableIconUrl = $iconUrl | .webManifestUrl = $manifestUrl | .fullScopeUrl = $fullScopeUrl' \
+             twa-manifest.json > twa-manifest-updated.json
+          mv twa-manifest-updated.json twa-manifest.json
+          cat twa-manifest.json
+
+      - name: Generate signing key
+        run: |
+          keytool -genkeypair \
+            -alias patreonreader \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -keystore android.keystore \
+            -storepass ${{ secrets.KEYSTORE_PASSWORD || 'android' }} \
+            -keypass ${{ secrets.KEYSTORE_PASSWORD || 'android' }} \
+            -dname "CN=Patreon Reader, OU=Development, O=Ecleptic, L=Unknown, ST=Unknown, C=US"
+
+      - name: Initialize Bubblewrap project
+        run: |
+          # Bubblewrap requires the manifest URL to be accessible
+          # Use --skipPwaValidation to skip URL validation
+          bubblewrap init --manifest twa-manifest.json --skipPwaValidation
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'android' }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'android' }}
+
+      - name: Build APK
+        run: |
+          bubblewrap build --skipPwaValidation
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'android' }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'android' }}
+
+      - name: Rename APK
+        run: |
+          VERSION="${{ needs.check-comment.outputs.version }}"
+          if [ -f "app-release-signed.apk" ]; then
+            mv app-release-signed.apk PatreonReader-v${VERSION}.apk
+          elif [ -f "app-release-unsigned.apk" ]; then
+            mv app-release-unsigned.apk PatreonReader-v${VERSION}.apk
+          else
+            echo "Looking for APK files..."
+            find . -name "*.apk" -type f
+            exit 1
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PatreonReader-APK
+          path: PatreonReader-*.apk
+          retention-days: 30
+
+      - name: Comment with download link
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `✅ APK build complete!\n\n📦 Download: [PatreonReader-v${{ needs.check-comment.outputs.version }}.apk](${runUrl})\n\nGo to the workflow run and download the artifact.`
+            })
+
+  create-release:
+    needs: [check-comment, build-apk]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: PatreonReader-APK
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.check-comment.outputs.version }}
+          name: PatreonReader v${{ needs.check-comment.outputs.version }}
+          body: |
+            ## PatreonReader v${{ needs.check-comment.outputs.version }}
+            
+            Android APK for PWA installation.
+            
+            ### Installation
+            1. Download the APK
+            2. Enable "Install from unknown sources" on your Android device
+            3. Install the APK
+            
+            ### Configuration
+            Built for host: `${{ needs.check-comment.outputs.host }}`
+          files: PatreonReader-*.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

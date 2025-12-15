@@ -157,10 +157,40 @@ patreon-reader/
 │   ├── sw.js           # Service Worker
 │   ├── manifest.json   # PWA manifest
 │   └── icons/          # App icons
+├── scripts/
+│   └── build-apk.sh    # Android APK build script
+├── twa-manifest.json   # TWA config for Android
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
 ```
+
+## Android APK Build
+
+You can build an Android APK that wraps the PWA using [Bubblewrap](https://github.com/nicholascruz/nicholascruz).
+
+### Via GitHub Actions
+
+1. **Manual trigger**: Go to Actions → "Build Android APK" → Run workflow
+   - Enter your server hostname (e.g., `myserver.com`)
+   - Enter version (e.g., `1.0.0`)
+
+2. **PR comment trigger**: Comment on any PR with:
+   ```
+   /build-apk host=myserver.com version=1.0.0
+   ```
+
+### Local Build
+
+```bash
+# Install prerequisites
+npm install -g @bubblewrap/cli
+
+# Build APK (requires your server to be running at the host)
+./scripts/build-apk.sh your-server.com 1.0.0
+```
+
+**Note:** The APK build requires your PWA to be accessible at the specified host URL so the manifest can be validated.
 
 ## EPUB Converter (Legacy)
 

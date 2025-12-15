@@ -54,4 +54,9 @@ logs/
 .pytest_cache/
 htmlcov/
 .coverage
-Thumbs.db
+
+# Android build
+*.apk
+*.keystore
+android.keystore
+build/android/

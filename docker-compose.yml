@@ -4,7 +4,7 @@ services:
     container_name: patreon-reader
     restart: unless-stopped
     ports:
-      - "${PORT:-8000}:8000"
+      - "${PORT:-8085}:8000"
     environment:
       - API_TOKEN=${API_TOKEN:-}
       - PATREON_SESSION=${PATREON_SESSION:-}

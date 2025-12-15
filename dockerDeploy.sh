@@ -3,7 +3,7 @@
 # PatreonReader Docker Deployment Script
 # Single entry point for all Docker operations
 #
-# Usage: ./deploy.sh [command]
+# Usage: ./dockerDeploy.sh [command]
 #
 # Commands:
 #   deploy       - Full deployment (stop, rebuild, verify, start)
@@ -32,7 +32,12 @@ PROJECT_NAME="patreon-reader"
 SERVICE_NAME="patreon-reader"
 COMPOSE_FILE="docker-compose.yml"
 REQUIRED_FILES=("Dockerfile" "docker-compose.yml" "requirements.txt" "api_server.py")
-HEALTH_CHECK_URL="http://localhost:8000/api/health"
+
+# Port configuration with fallback
+DEFAULT_PORT=8085
+MAX_PORT_ATTEMPTS=10
+ACTIVE_PORT=""
+
 HEALTH_CHECK_RETRIES=30
 HEALTH_CHECK_DELAY=2
 
@@ -139,6 +144,52 @@ run_checks() {
 }
 
 # =============================================================================
+# Port Management
+# =============================================================================
+
+check_port_available() {
+    local port=$1
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+        return 1  # Port in use
+    fi
+    return 0  # Port available
+}
+
+find_available_port() {
+    local port=${1:-$DEFAULT_PORT}
+    local attempts=0
+    
+    while [[ $attempts -lt $MAX_PORT_ATTEMPTS ]]; do
+        if check_port_available $port; then
+            echo $port
+            return 0
+        fi
+        warning "Port $port is in use, trying next..."
+        port=$((port + 1))
+        attempts=$((attempts + 1))
+    done
+    
+    error "Could not find available port after $MAX_PORT_ATTEMPTS attempts"
+    return 1
+}
+
+get_current_port() {
+    # Check if container is running and get its port
+    local port=$(docker port $SERVICE_NAME 8000/tcp 2>/dev/null | cut -d: -f2)
+    if [[ -n "$port" ]]; then
+        echo $port
+    else
+        echo $DEFAULT_PORT
+    fi
+}
+
+set_port() {
+    local port=$1
+    export PORT=$port
+    ACTIVE_PORT=$port
+}
+
+# =============================================================================
 # Docker Compose Wrapper
 # =============================================================================
 
@@ -178,6 +229,15 @@ cmd_start() {
     header "Starting Services"
     run_checks
     check_env_file || true
+    
+    # Find available port
+    local port=$(find_available_port $DEFAULT_PORT)
+    if [[ $? -ne 0 ]]; then
+        error "Failed to find available port"
+        exit 1
+    fi
+    set_port $port
+    info "Using port: $ACTIVE_PORT"
     
     info "Starting containers..."
     compose up -d
@@ -236,15 +296,19 @@ cmd_verify() {
     fi
     success "Container is running"
     
-    info "Waiting for API to be ready..."
+    # Get the actual port being used
+    local port=$(get_current_port)
+    local health_url="http://localhost:$port/api/health"
+    
+    info "Waiting for API to be ready on port $port..."
     local retries=0
     while [[ $retries -lt $HEALTH_CHECK_RETRIES ]]; do
-        if curl -s -f "$HEALTH_CHECK_URL" > /dev/null 2>&1; then
+        if curl -s -f "$health_url" > /dev/null 2>&1; then
             success "API is healthy and responding"
             
             # Show API info
             info "API Response:"
-            curl -s "$HEALTH_CHECK_URL" | python3 -m json.tool 2>/dev/null || curl -s "$HEALTH_CHECK_URL"
+            curl -s "$health_url" | python3 -m json.tool 2>/dev/null || curl -s "$health_url"
             echo ""
             return 0
         fi
@@ -256,7 +320,7 @@ cmd_verify() {
     
     echo ""
     error "API health check failed after $HEALTH_CHECK_RETRIES attempts"
-    info "Check logs with: ./deploy.sh logs"
+    info "Check logs with: ./dockerDeploy.sh logs"
     return 1
 }
 
@@ -306,6 +370,15 @@ cmd_deploy() {
     info "Stopping existing containers..."
     compose down 2>/dev/null || true
     
+    # Find available port
+    local port=$(find_available_port $DEFAULT_PORT)
+    if [[ $? -ne 0 ]]; then
+        error "Failed to find available port"
+        exit 1
+    fi
+    set_port $port
+    info "Using port: $ACTIVE_PORT"
+    
     info "Building image..."
     compose build
     
@@ -317,11 +390,11 @@ cmd_deploy() {
     if cmd_verify; then
         success "Deployment complete!"
         echo ""
-        info "Access the application at: http://localhost:8000"
-        info "E-Paper reader at: http://localhost:8000/reader/"
+        info "Access the application at: http://localhost:$ACTIVE_PORT"
+        info "E-Paper reader at: http://localhost:$ACTIVE_PORT/reader/"
     else
         error "Deployment completed but health check failed"
-        info "Check logs with: ./deploy.sh logs"
+        info "Check logs with: ./dockerDeploy.sh logs"
         exit 1
     fi
 }
@@ -347,7 +420,7 @@ cmd_help() {
     echo ""
     echo -e "${CYAN}PatreonReader Docker Deployment Script${NC}"
     echo ""
-    echo "Usage: ./deploy.sh [command]"
+    echo "Usage: ./dockerDeploy.sh [command]"
     echo ""
     echo "Commands:"
     echo "  deploy       Full deployment (stop, rebuild, verify, start) [default]"
@@ -366,10 +439,15 @@ cmd_help() {
     echo "  help         Show this help message"
     echo ""
     echo "Examples:"
-    echo "  ./deploy.sh              # Run full deployment"
-    echo "  ./deploy.sh start        # Start services"
-    echo "  ./deploy.sh logs-follow  # Follow logs"
-    echo "  ./deploy.sh status       # Check container status"
+    echo "  ./dockerDeploy.sh              # Run full deployment"
+    echo "  ./dockerDeploy.sh start        # Start services"
+    echo "  ./dockerDeploy.sh logs-follow  # Follow logs"
+    echo "  ./dockerDeploy.sh status       # Check container status"
+    echo ""
+    echo "Port Configuration:"
+    echo "  Default port: $DEFAULT_PORT"
+    echo "  If port is in use, automatically tries next port (up to $MAX_PORT_ATTEMPTS attempts)"
+    echo "  Override with: PORT=9000 ./dockerDeploy.sh deploy"
     echo ""
     echo "Configuration:"
     echo "  Edit .env file to configure:"

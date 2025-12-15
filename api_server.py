@@ -615,6 +615,11 @@ async def serve_frontend():
 
 # Mount static files (for JS, CSS, etc.)
 if STATIC_DIR.exists():
+    # Serve .well-known for TWA/Digital Asset Links
+    well_known_dir = STATIC_DIR / ".well-known"
+    if well_known_dir.exists():
+        app.mount("/.well-known", StaticFiles(directory=str(well_known_dir)), name="well-known")
+    
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 

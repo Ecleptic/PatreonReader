@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.poseidonserver.patreonreader.twa",
+      "sha256_cert_fingerprints": [
+        "17:F7:90:26:25:AB:98:9C:68:EE:31:AB:65:BD:C5:81:0D:D2:DD:0A:68:7F:EC:54:C8:6C:64:29:C6:59:DD:35"
+      ]
+    }
+  }
+]

@@ -2,8 +2,8 @@
    Patreon Reader - JavaScript App
    ============================================================================ */
 
-// API base URL (same origin in production, can be changed for dev)
-const API_BASE = '';
+// API base URL - loaded from config endpoint, defaults to same origin
+let API_BASE = '';
 
 // App state
 const state = {
@@ -21,11 +21,38 @@ const state = {
     authRequired: false,
     authenticated: false,
     isOnline: navigator.onLine,
-    offlineDb: null
+    offlineDb: null,
+    configLoaded: false
 };
 
 // View history for back navigation
 const viewHistory = [];
+
+/* ============================================================================
+   Configuration
+   ============================================================================ */
+
+async function loadConfig() {
+    try {
+        // Try to load config from the API
+        const response = await fetch('/api/config');
+        if (response.ok) {
+            const config = await response.json();
+            API_BASE = config.api_url || '';
+            state.authRequired = config.auth_enabled;
+            state.configLoaded = true;
+            console.log('Config loaded:', { api_url: API_BASE, auth_enabled: config.auth_enabled });
+            return config;
+        }
+    } catch (error) {
+        console.warn('Failed to load config, using defaults:', error);
+    }
+    
+    // Fallback to same-origin
+    API_BASE = '';
+    state.configLoaded = true;
+    return { api_url: '', auth_enabled: false };
+}
 
 /* ============================================================================
    Service Worker & PWA
@@ -1104,6 +1131,9 @@ function showToast(message, type = 'info') {
    ============================================================================ */
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Load runtime configuration first
+    await loadConfig();
+    
     // Initialize PWA and offline support
     await registerServiceWorker();
     await initOfflineDB();

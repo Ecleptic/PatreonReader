@@ -57,6 +57,11 @@ logger = logging.getLogger("patreon_reader")
 SETTINGS_PATH = "./settings.json"
 STATIC_DIR = Path("./static")
 
+# App URL - public-facing URL for the application
+# Used by PWA and frontend to connect to the correct backend
+# If not set, defaults to same-origin (empty string)
+APP_URL = os.getenv("APP_URL", "").rstrip("/")
+
 # Authentication configuration
 # Set API_TOKEN in .env to require authentication
 # If not set, auth is disabled (for local development)
@@ -221,6 +226,20 @@ async def health_check():
     """Health check endpoint (no auth required)."""
     return {
         "status": "healthy",
+        "auth_enabled": AUTH_ENABLED,
+        "version": "1.0.0"
+    }
+
+
+@app.get("/api/config")
+async def get_config():
+    """Get runtime configuration for the frontend (no auth required).
+    
+    Returns configuration that the frontend needs to connect properly.
+    Does NOT expose sensitive data like tokens or credentials.
+    """
+    return {
+        "api_url": APP_URL,  # Backend API URL (empty = same origin)
         "auth_enabled": AUTH_ENABLED,
         "version": "1.0.0"
     }

@@ -6,6 +6,7 @@ services:
     ports:
       - "${PORT:-8085}:8000"
     environment:
+      - APP_URL=${APP_URL:-}
       - API_TOKEN=${API_TOKEN:-}
       - PATREON_SESSION=${PATREON_SESSION:-}
       - SYNC_INTERVAL_HOURS=${SYNC_INTERVAL_HOURS:-2}

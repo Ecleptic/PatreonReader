@@ -1,0 +1,18 @@
+{
+    "creators": [
+        {
+            "name": "Example Creator",
+            "url": "https://www.patreon.com/c/example/posts",
+            "enabled": true
+        }
+    ],
+    "sync": {
+        "interval_hours": 2.0,
+        "auto_start": false
+    },
+    "storage": {
+        "posts_dir": "./data/posts",
+        "database": "./data/patreon_posts.db"
+    },
+    "_comment": "Add more creators by adding entries to the 'creators' array. Example URLs: https://www.patreon.com/c/creatorname/posts"
+}

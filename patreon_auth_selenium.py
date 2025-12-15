@@ -15,6 +15,14 @@ from webdriver_manager.chrome import ChromeDriverManager
 from config import Config
 
 
+# Import rate limiter
+try:
+    from patreon_scraper import rate_limiter
+except ImportError:
+    # Fallback if imported before scraper
+    rate_limiter = None
+
+
 class PatreonAuthSelenium:
     """Handle Patreon authentication using Selenium."""
     
@@ -205,6 +213,10 @@ class PatreonAuthSelenium:
         """Get page source for a URL."""
         if not self.authenticated:
             raise RuntimeError("Not authenticated. Call login() first.")
+        
+        # Rate limit requests to Patreon
+        if rate_limiter:
+            rate_limiter.wait()
         
         self.driver.get(url)
         time.sleep(3)  # Wait for dynamic content

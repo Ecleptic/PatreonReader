@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#f96854">
+    <meta name="description" content="Read your Patreon posts offline">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- iOS icons -->
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.svg">
+    
+    <title>Patreon Reader</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-screen hidden">
+        <div class="login-container">
+            <h1>🔐 Patreon Reader</h1>
+            <p>Enter your API token to continue</p>
+            <input type="password" id="login-token" placeholder="API Token" onkeypress="if(event.key==='Enter')attemptLogin()">
+            <button onclick="attemptLogin()" class="btn">Login</button>
+            <p class="login-hint">Set API_TOKEN in .env on the server</p>
+        </div>
+    </div>
+
+    <div id="app">
+        <div id="app-content">
+            <!-- Navigation -->
+            <nav id="nav">
+                <div class="nav-content">
+                    <button id="nav-back" class="nav-btn hidden" onclick="goBack()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 12H5M12 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <h1 id="nav-title">Patreon Reader</h1>
+                    <button id="nav-sync" class="nav-btn" onclick="showSyncMenu()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6"/>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <main id="main-content">
+                <!-- Creators List View -->
+                <div id="view-creators" class="view active">
+                    <div class="search-bar">
+                    <input type="text" id="creator-search" placeholder="Search creators..." oninput="filterCreators()">
+                </div>
+                <div id="creators-list" class="list"></div>
+                <button id="add-creator-btn" class="fab" onclick="showAddCreator()">+</button>
+            </div>
+
+            <!-- Posts List View -->
+            <div id="view-posts" class="view">
+                <div class="search-bar">
+                    <input type="text" id="post-search" placeholder="Search posts..." oninput="searchPosts()">
+                </div>
+                <div id="posts-list" class="list"></div>
+                <div id="posts-loading" class="loading hidden">Loading more...</div>
+            </div>
+
+            <!-- Post Reader View -->
+            <div id="view-reader" class="view">
+                <!-- Top Navigation -->
+                <div class="reader-nav" id="reader-nav-top">
+                    <button id="prev-btn-top" class="nav-post-btn" onclick="goToPrevPost()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 12H5M12 19l-7-7 7-7"/>
+                        </svg>
+                        Prev
+                    </button>
+                    <button id="read-toggle-btn" class="nav-post-btn read-toggle" onclick="toggleReadStatus()">
+                        <span id="read-status-icon">○</span>
+                        <span id="read-status-text">Mark Read</span>
+                    </button>
+                    <button id="offline-toggle-btn" class="nav-post-btn offline-toggle" onclick="toggleOfflinePost()">
+                        <span id="offline-status-icon">↓</span>
+                        <span id="offline-status-text">Save</span>
+                    </button>
+                    <button id="next-btn-top" class="nav-post-btn" onclick="goToNextPost()">
+                        Next
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <article id="reader-content">
+                    <h1 id="reader-title"></h1>
+                    <div id="reader-meta"></div>
+                    <div id="reader-body"></div>
+                </article>
+                
+                <!-- Bottom Navigation -->
+                <div class="reader-nav" id="reader-nav-bottom">
+                    <button id="prev-btn-bottom" class="nav-post-btn" onclick="goToPrevPost()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 12H5M12 19l-7-7 7-7"/>
+                        </svg>
+                        Previous
+                    </button>
+                    <button class="nav-post-btn" onclick="goBack()">
+                        Back to List
+                    </button>
+                    <button id="next-btn-bottom" class="nav-post-btn" onclick="goToNextPost()">
+                        Next
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings/Sync View -->
+            <div id="view-settings" class="view">
+                <div class="settings-section">
+                    <h2>Manual Sync</h2>
+                    <p class="settings-desc">Download posts now</p>
+                    <div class="button-group">
+                        <button id="btn-quick-sync" onclick="quickSync()" class="btn">Quick Sync</button>
+                        <button id="btn-full-sync" onclick="fullSync()" class="btn btn-secondary">Full Sync (All Posts)</button>
+                    </div>
+                    <div id="sync-progress" class="sync-progress hidden"></div>
+                </div>
+                <div class="settings-section">
+                    <h2>Auto Sync</h2>
+                    <div id="sync-status"></div>
+                    <div class="setting-row">
+                        <label>Check every</label>
+                        <input type="number" id="sync-interval" min="0.5" step="0.5" value="2">
+                        <span>hours</span>
+                        <button onclick="updateInterval()" class="btn btn-small">Save</button>
+                    </div>
+                    <div class="button-group">
+                        <button id="bg-sync-toggle" onclick="toggleBackgroundSync()" class="btn">Start Auto Sync</button>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h2>E-Paper Reader</h2>
+                    <p class="settings-desc">Simplified view optimized for e-ink displays and slow connections.</p>
+                    <div class="button-group">
+                        <a href="/reader/" class="btn" style="text-align: center; text-decoration: none;">Open E-Paper Reader</a>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h2>Offline Storage</h2>
+                    <p class="settings-desc" id="offline-stats">Loading...</p>
+                    <div class="button-group">
+                        <button onclick="viewOfflinePosts()" class="btn">View Saved Posts</button>
+                        <button onclick="clearOfflinePosts()" class="btn btn-secondary">Clear All</button>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h2>Statistics</h2>
+                    <div id="stats"></div>
+                </div>
+                <div class="settings-section" id="auth-section">
+                    <h2>Account</h2>
+                    <p class="settings-desc" id="auth-status-text">Authentication status</p>
+                    <div class="button-group">
+                        <button onclick="logout()" class="btn btn-secondary">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Add Creator Modal -->
+        <div id="modal-add-creator" class="modal hidden">
+            <div class="modal-content">
+                <h2>Add Creator</h2>
+                <input type="text" id="new-creator-url" placeholder="https://www.patreon.com/c/creator/posts">
+                <input type="text" id="new-creator-name" placeholder="Display name (optional)">
+                <div class="button-group">
+                    <button onclick="addCreator()" class="btn">Add</button>
+                    <button onclick="hideModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast notifications -->
+        <div id="toast" class="toast hidden"></div>
+        </div><!-- end app-content -->
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

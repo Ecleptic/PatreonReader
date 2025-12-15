@@ -1,0 +1,30 @@
+services:
+  patreon-reader:
+    build: .
+    container_name: patreon-reader
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - API_TOKEN=${API_TOKEN:-}
+      - PATREON_SESSION=${PATREON_SESSION:-}
+      - SYNC_INTERVAL_HOURS=${SYNC_INTERVAL_HOURS:-2}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - TZ=${TZ:-UTC}
+    volumes:
+      # Persist database
+      - patreon_data:/app/data
+      # Optional: mount session cache for Patreon auth persistence
+      - patreon_cache:/app/cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  patreon_data:
+    driver: local
+  patreon_cache:
+    driver: local

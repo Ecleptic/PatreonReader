@@ -2,11 +2,62 @@
 
 import re
 import json
+import time
+import threading
 from typing import List, Dict, Optional, Union
 from bs4 import BeautifulSoup
 from pathlib import Path
 from config import Config
 import requests
+
+
+# ============================================================================
+# Rate Limiter
+# ============================================================================
+
+class RateLimiter:
+    """
+    Simple rate limiter to prevent hitting Patreon's servers too hard.
+    
+    Default: 1 request per 2 seconds (30 requests/minute)
+    """
+    
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self, min_interval: float = 2.0):
+        if self._initialized:
+            return
+        self.min_interval = min_interval
+        self.last_request_time = 0
+        self._request_lock = threading.Lock()
+        self._initialized = True
+    
+    def wait(self):
+        """Wait until it's safe to make another request."""
+        with self._request_lock:
+            now = time.time()
+            elapsed = now - self.last_request_time
+            if elapsed < self.min_interval:
+                sleep_time = self.min_interval - elapsed
+                time.sleep(sleep_time)
+            self.last_request_time = time.time()
+    
+    def set_interval(self, seconds: float):
+        """Update the minimum interval between requests."""
+        self.min_interval = max(0.5, seconds)  # At least 0.5 seconds
+
+
+# Global rate limiter instance
+rate_limiter = RateLimiter()
 
 
 class Post:

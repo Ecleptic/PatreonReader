@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - Patreon Reader</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .offline-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            padding: 20px;
+        }
+        .offline-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        .offline-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        .offline-message {
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-page">
+        <div class="offline-icon">📡</div>
+        <h1 class="offline-title">You're Offline</h1>
+        <p class="offline-message">
+            Check your internet connection and try again.<br>
+            Downloaded posts are still available.
+        </p>
+        <button class="btn" onclick="window.location.reload()">Try Again</button>
+    </div>
+</body>
+</html>

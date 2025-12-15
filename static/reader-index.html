@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>Patreon Reader - E-Paper</title>
+    <style>
+        /* E-Paper Optimized Styles */
+        * {
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg: #ffffff;
+            --text: #000000;
+            --text-secondary: #444444;
+            --border: #cccccc;
+            --unread: #000000;
+            --read: #666666;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #000000;
+                --text: #ffffff;
+                --text-secondary: #aaaaaa;
+                --border: #444444;
+                --unread: #ffffff;
+                --read: #888888;
+            }
+        }
+        
+        html {
+            font-size: 16px;
+        }
+        
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Header */
+        .header {
+            border-bottom: 2px solid var(--border);
+            padding: 1rem;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        
+        .header-nav {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .header-nav a {
+            color: var(--text);
+            text-decoration: none;
+            padding: 0.4rem 0.8rem;
+            border: 2px solid var(--border);
+            font-size: 0.9rem;
+        }
+        
+        .header-nav a.active {
+            background: var(--text);
+            color: var(--bg);
+        }
+        
+        .header-nav a:active {
+            background: var(--text);
+            color: var(--bg);
+        }
+        
+        /* Container */
+        .container {
+            max-width: 50rem;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        /* Creator selector */
+        .creator-select {
+            margin-bottom: 1.5rem;
+        }
+        
+        .creator-select label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        
+        .creator-select select {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 1rem;
+            font-family: inherit;
+            border: 2px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+        }
+        
+        /* Post list */
+        .post-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .post-item {
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .post-link {
+            display: block;
+            padding: 1rem 0;
+            text-decoration: none;
+            color: var(--text);
+        }
+        
+        .post-link:active {
+            background: var(--border);
+        }
+        
+        .post-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin: 0 0 0.3rem 0;
+            color: var(--unread);
+        }
+        
+        .post-item.read .post-title {
+            color: var(--read);
+            font-weight: normal;
+        }
+        
+        .post-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .post-meta .unread-badge {
+            font-weight: bold;
+            margin-left: 0.5rem;
+        }
+        
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 2px solid var(--border);
+        }
+        
+        .pagination button {
+            padding: 0.6rem 1.2rem;
+            font-size: 1rem;
+            font-family: inherit;
+            border: 2px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            cursor: pointer;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        .pagination button:active:not(:disabled) {
+            background: var(--text);
+            color: var(--bg);
+        }
+        
+        .pagination .page-info {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Filter bar */
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.9rem;
+            font-family: inherit;
+            border: 2px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            cursor: pointer;
+        }
+        
+        .filter-btn.active {
+            background: var(--text);
+            color: var(--bg);
+        }
+        
+        .filter-btn:active {
+            background: var(--text);
+            color: var(--bg);
+        }
+        
+        /* Loading/Empty states */
+        .message {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Stats */
+        .stats {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+        
+        /* Sync button */
+        .sync-btn {
+            padding: 0.6rem 1.2rem;
+            font-size: 1rem;
+            font-family: inherit;
+            border: 2px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            cursor: pointer;
+            margin-left: auto;
+        }
+        
+        .sync-btn:active {
+            background: var(--text);
+            color: var(--bg);
+        }
+        
+        .sync-btn:disabled {
+            opacity: 0.5;
+            cursor: wait;
+        }
+        
+        /* Settings link */
+        .settings-link {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-decoration: none;
+            border-bottom: 1px solid var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Patreon Reader</h1>
+        <nav class="header-nav">
+            <a href="/" class="settings-link">Full App</a>
+            <button class="sync-btn" onclick="syncPosts()" id="sync-btn">↻ Sync</button>
+        </nav>
+    </header>
+    
+    <main class="container">
+        <div class="creator-select">
+            <label for="creator">Select Creator:</label>
+            <select id="creator" onchange="selectCreator(this.value)">
+                <option value="">-- Select a creator --</option>
+            </select>
+        </div>
+        
+        <div class="filter-bar" id="filter-bar" style="display: none;">
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+            <button class="filter-btn" data-filter="unread" onclick="setFilter('unread')">Unread</button>
+            <button class="filter-btn" data-filter="read" onclick="setFilter('read')">Read</button>
+        </div>
+        
+        <div class="stats" id="stats"></div>
+        
+        <ul class="post-list" id="post-list">
+            <li class="message">Select a creator to view posts</li>
+        </ul>
+        
+        <div class="pagination" id="pagination" style="display: none;">
+            <button onclick="prevPage()" id="prev-btn">← Previous</button>
+            <span class="page-info" id="page-info">Page 1</span>
+            <button onclick="nextPage()" id="next-btn">Next →</button>
+        </div>
+    </main>
+
+    <script>
+        // State
+        let creators = [];
+        let posts = [];
+        let currentCreator = null;
+        let currentFilter = 'all';
+        let currentPage = 1;
+        const postsPerPage = 20;
+        
+        // Format date
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+        
+        // Load creators
+        async function loadCreators() {
+            try {
+                const response = await fetch('/api/creators');
+                creators = await response.json();
+                
+                const select = document.getElementById('creator');
+                select.innerHTML = '<option value="">-- Select a creator --</option>';
+                
+                creators.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.id;
+                    option.textContent = `${c.name} (${c.post_count} posts)`;
+                    select.appendChild(option);
+                });
+                
+                // Restore last selected creator
+                const lastCreator = localStorage.getItem('epaper_creator');
+                if (lastCreator && creators.find(c => c.id === lastCreator)) {
+                    select.value = lastCreator;
+                    selectCreator(lastCreator);
+                }
+            } catch (error) {
+                console.error('Failed to load creators:', error);
+            }
+        }
+        
+        // Select creator and load posts
+        async function selectCreator(creatorId) {
+            if (!creatorId) {
+                currentCreator = null;
+                posts = [];
+                renderPosts();
+                document.getElementById('filter-bar').style.display = 'none';
+                document.getElementById('pagination').style.display = 'none';
+                document.getElementById('stats').textContent = '';
+                return;
+            }
+            
+            currentCreator = creatorId;
+            localStorage.setItem('epaper_creator', creatorId);
+            currentPage = 1;
+            
+            try {
+                const response = await fetch(`/api/posts/${creatorId}?limit=1000`);
+                const data = await response.json();
+                posts = data.posts || [];
+                
+                document.getElementById('filter-bar').style.display = 'flex';
+                renderPosts();
+            } catch (error) {
+                console.error('Failed to load posts:', error);
+                document.getElementById('post-list').innerHTML = 
+                    '<li class="message">Error loading posts</li>';
+            }
+        }
+        
+        // Filter posts
+        function getFilteredPosts() {
+            if (currentFilter === 'unread') {
+                return posts.filter(p => !p.is_read);
+            } else if (currentFilter === 'read') {
+                return posts.filter(p => p.is_read);
+            }
+            return posts;
+        }
+        
+        // Set filter
+        function setFilter(filter) {
+            currentFilter = filter;
+            currentPage = 1;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === filter);
+            });
+            
+            renderPosts();
+        }
+        
+        // Render posts
+        function renderPosts() {
+            const list = document.getElementById('post-list');
+            const pagination = document.getElementById('pagination');
+            const stats = document.getElementById('stats');
+            
+            if (!currentCreator) {
+                list.innerHTML = '<li class="message">Select a creator to view posts</li>';
+                pagination.style.display = 'none';
+                return;
+            }
+            
+            const filtered = getFilteredPosts();
+            const totalPages = Math.ceil(filtered.length / postsPerPage);
+            const start = (currentPage - 1) * postsPerPage;
+            const end = start + postsPerPage;
+            const pagePosts = filtered.slice(start, end);
+            
+            // Stats
+            const unreadCount = posts.filter(p => !p.is_read).length;
+            stats.textContent = `${posts.length} posts total, ${unreadCount} unread`;
+            
+            if (pagePosts.length === 0) {
+                list.innerHTML = '<li class="message">No posts found</li>';
+                pagination.style.display = 'none';
+                return;
+            }
+            
+            list.innerHTML = pagePosts.map(post => `
+                <li class="post-item ${post.is_read ? 'read' : ''}">
+                    <a href="/reader/post?creator=${currentCreator}&post=${post.id}" class="post-link">
+                        <div class="post-title">${escapeHtml(post.title)}</div>
+                        <div class="post-meta">
+                            ${formatDate(post.published_at)}
+                            ${!post.is_read ? '<span class="unread-badge">●</span>' : ''}
+                        </div>
+                    </a>
+                </li>
+            `).join('');
+            
+            // Pagination
+            if (totalPages > 1) {
+                pagination.style.display = 'flex';
+                document.getElementById('prev-btn').disabled = currentPage <= 1;
+                document.getElementById('next-btn').disabled = currentPage >= totalPages;
+                document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages}`;
+            } else {
+                pagination.style.display = 'none';
+            }
+        }
+        
+        // Pagination
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPosts();
+                window.scrollTo(0, 0);
+            }
+        }
+        
+        function nextPage() {
+            const filtered = getFilteredPosts();
+            const totalPages = Math.ceil(filtered.length / postsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPosts();
+                window.scrollTo(0, 0);
+            }
+        }
+        
+        // Sync posts
+        async function syncPosts() {
+            const btn = document.getElementById('sync-btn');
+            btn.disabled = true;
+            btn.textContent = 'Syncing...';
+            
+            try {
+                await fetch('/api/sync', { method: 'POST' });
+                
+                // Wait a bit for sync to make progress, then reload
+                setTimeout(async () => {
+                    await loadCreators();
+                    if (currentCreator) {
+                        await selectCreator(currentCreator);
+                    }
+                    btn.disabled = false;
+                    btn.textContent = '↻ Sync';
+                }, 3000);
+            } catch (error) {
+                console.error('Sync failed:', error);
+                btn.disabled = false;
+                btn.textContent = '↻ Sync';
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Initialize
+        loadCreators();
+    </script>
+</body>
+</html>

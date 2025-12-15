@@ -1,5 +1,8 @@
-# Environment variables
+# Environment variables - NEVER COMMIT SECRETS
 .env
+
+# User settings
+settings.json
 
 # Python
 __pycache__/
@@ -10,6 +13,7 @@ __pycache__/
 venv/
 env/
 ENV/
+.venv/
 *.egg-info/
 dist/
 build/
@@ -18,6 +22,10 @@ build/
 output/
 cache/
 *.epub
+
+# Database
+data/
+*.db
 
 # IDE
 .vscode/
@@ -28,4 +36,22 @@ cache/
 
 # OS
 .DS_Store
+Thumbs.db
+
+# Selenium/Browser drivers
+chromedriver
+geckodriver
+*.pkl
+
+# User content
+books/
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage
 Thumbs.db

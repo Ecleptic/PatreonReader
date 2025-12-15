@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>{{title}} - Patreon Reader</title>
+    <style>
+        /* E-Paper Optimized Styles */
+        * {
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg: #ffffff;
+            --text: #000000;
+            --text-secondary: #333333;
+            --border: #cccccc;
+            --link: #000000;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #000000;
+                --text: #ffffff;
+                --text-secondary: #cccccc;
+                --border: #444444;
+                --link: #ffffff;
+            }
+        }
+        
+        html {
+            font-size: 18px;
+        }
+        
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            line-height: 1.8;
+            color: var(--text);
+            background: var(--bg);
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Navigation - minimal for e-paper */
+        .nav {
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            border-bottom: 2px solid var(--border);
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .nav a {
+            color: var(--link);
+            text-decoration: none;
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--border);
+            background: var(--bg);
+        }
+        
+        .nav a:active {
+            background: var(--text);
+            color: var(--bg);
+        }
+        
+        .nav-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-align: center;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        /* Article content */
+        .container {
+            max-width: 45rem;
+            margin: 0 auto;
+            padding: 1.5rem 1rem 4rem;
+        }
+        
+        .header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: bold;
+            margin: 0 0 0.5rem 0;
+            line-height: 1.3;
+        }
+        
+        .meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .content {
+            font-size: 1.1rem;
+        }
+        
+        .content p {
+            margin: 0 0 1.5em 0;
+            text-align: justify;
+            hyphens: auto;
+        }
+        
+        .content h1, .content h2, .content h3, .content h4 {
+            margin: 2em 0 1em 0;
+            line-height: 1.3;
+        }
+        
+        .content h1 { font-size: 1.5rem; }
+        .content h2 { font-size: 1.35rem; }
+        .content h3 { font-size: 1.2rem; }
+        .content h4 { font-size: 1.1rem; }
+        
+        .content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1.5em auto;
+        }
+        
+        .content a {
+            color: var(--link);
+            text-decoration: underline;
+        }
+        
+        .content blockquote {
+            margin: 1.5em 0;
+            padding: 0.5em 1em;
+            border-left: 4px solid var(--border);
+            font-style: italic;
+        }
+        
+        .content pre, .content code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            background: var(--border);
+            padding: 0.2em 0.4em;
+        }
+        
+        .content pre {
+            padding: 1em;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .content ul, .content ol {
+            margin: 1em 0;
+            padding-left: 2em;
+        }
+        
+        .content li {
+            margin: 0.5em 0;
+        }
+        
+        .content hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2em 0;
+        }
+        
+        /* Bottom navigation */
+        .bottom-nav {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid var(--border);
+        }
+        
+        .bottom-nav a {
+            color: var(--link);
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--border);
+            font-size: 1rem;
+        }
+        
+        .bottom-nav a:active {
+            background: var(--text);
+            color: var(--bg);
+        }
+        
+        .bottom-nav .spacer {
+            flex: 1;
+        }
+        
+        /* Font size controls */
+        .font-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .font-btn {
+            width: 2.5rem;
+            height: 2.5rem;
+            border: 2px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .font-btn:active {
+            background: var(--text);
+            color: var(--bg);
+        }
+        
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Error state */
+        .error {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--text);
+        }
+        
+        /* Print styles */
+        @media print {
+            .nav, .bottom-nav, .font-controls {
+                display: none;
+            }
+            
+            body {
+                font-size: 12pt;
+            }
+            
+            .container {
+                max-width: none;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="/reader/" id="back-btn">← Back</a>
+        <span class="nav-title" id="nav-title">Loading...</span>
+        <div class="font-controls">
+            <button class="font-btn" onclick="decreaseFont()" aria-label="Decrease font size">A-</button>
+            <button class="font-btn" onclick="increaseFont()" aria-label="Increase font size">A+</button>
+        </div>
+    </nav>
+    
+    <main class="container">
+        <article id="article">
+            <div class="loading">Loading post...</div>
+        </article>
+    </main>
+
+    <script>
+        // Get URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const creatorId = params.get('creator');
+        const postId = params.get('post');
+        
+        // Font size management
+        let fontSize = parseFloat(localStorage.getItem('readerFontSize') || '18');
+        document.documentElement.style.fontSize = fontSize + 'px';
+        
+        function increaseFont() {
+            fontSize = Math.min(fontSize + 2, 32);
+            document.documentElement.style.fontSize = fontSize + 'px';
+            localStorage.setItem('readerFontSize', fontSize);
+        }
+        
+        function decreaseFont() {
+            fontSize = Math.max(fontSize - 2, 12);
+            document.documentElement.style.fontSize = fontSize + 'px';
+            localStorage.setItem('readerFontSize', fontSize);
+        }
+        
+        // Format date
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+        
+        // Load post
+        async function loadPost() {
+            if (!creatorId || !postId) {
+                document.getElementById('article').innerHTML = `
+                    <div class="error">
+                        <h2>No Post Selected</h2>
+                        <p><a href="/reader/">Browse posts</a></p>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/posts/${creatorId}/${postId}`);
+                if (!response.ok) throw new Error('Post not found');
+                
+                const post = await response.json();
+                
+                // Update title
+                document.title = `${post.title} - Patreon Reader`;
+                document.getElementById('nav-title').textContent = post.title;
+                
+                // Render article
+                document.getElementById('article').innerHTML = `
+                    <header class="header">
+                        <h1>${escapeHtml(post.title)}</h1>
+                        <div class="meta">${formatDate(post.published_at)}</div>
+                    </header>
+                    <div class="content">${post.content}</div>
+                    <nav class="bottom-nav">
+                        ${post.prev_post_id 
+                            ? `<a href="/reader/post?creator=${creatorId}&post=${post.prev_post_id}">← Previous</a>` 
+                            : '<span></span>'}
+                        <span class="spacer"></span>
+                        ${post.next_post_id 
+                            ? `<a href="/reader/post?creator=${creatorId}&post=${post.next_post_id}">Next →</a>` 
+                            : '<span></span>'}
+                    </nav>
+                `;
+                
+                // Mark as read
+                fetch(`/api/posts/${creatorId}/${postId}/read`, { method: 'POST' });
+                
+            } catch (error) {
+                document.getElementById('article').innerHTML = `
+                    <div class="error">
+                        <h2>Error Loading Post</h2>
+                        <p>${error.message}</p>
+                        <p><a href="/reader/">← Back to posts</a></p>
+                    </div>
+                `;
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Load on page ready
+        loadPost();
+    </script>
+</body>
+</html>

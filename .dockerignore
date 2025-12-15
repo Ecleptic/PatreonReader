@@ -1,0 +1,55 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment variables
+.env
+!.env.example
+
+# Database
+*.db
+data/
+
+# Cache
+cache/
+*.cache
+
+# Output
+output/
+*.epub
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Selenium
+chromedriver
+geckodriver
+
+# Books directory (user content)
+books/
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage

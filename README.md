@@ -83,7 +83,7 @@ Authorization: Bearer your-token-here
 
 1. Open http://localhost:8000 in your browser
 2. Click the ⚙️ settings icon
-3. Add a Patreon creator URL (e.g., `https://www.patreon.com/c/millennialmage/posts`)
+3. Add a Patreon creator URL (e.g., `https://www.patreon.com/c/example-creator/posts`)
 4. Posts will automatically sync
 
 ### Installing as PWA (Android)

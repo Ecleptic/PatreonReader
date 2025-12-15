@@ -6,9 +6,9 @@ import sys
 from pathlib import Path
 
 # Series name mappings (optional - add as needed)
+# Map creator slug to series name
 SERIES_NAMES = {
-    'Zogarth': 'Primal Hunter',
-    'u48733767': 'Beware of Chicken',
+    # 'creator-slug': 'Series Name',
 }
 
 def read_books_file():

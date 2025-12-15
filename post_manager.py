@@ -33,7 +33,7 @@ def add(ctx, url, name):
     """Add a creator to follow.
     
     URL should be the Patreon creator's posts page, e.g.:
-    https://www.patreon.com/c/millennialmage/posts
+    https://www.patreon.com/c/example-creator/posts
     """
     fetcher = PostFetcher(settings_path=ctx.obj['settings'])
     fetcher.add_creator(url, name)

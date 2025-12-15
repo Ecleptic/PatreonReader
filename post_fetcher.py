@@ -57,7 +57,7 @@ class PostFetcher:
         Add a creator to follow.
         
         Args:
-            url: Patreon creator URL (e.g., https://www.patreon.com/c/millennialmage/posts)
+            url: Patreon creator URL (e.g., https://www.patreon.com/c/example-creator/posts)
             name: Optional display name
             
         Returns:
@@ -124,9 +124,9 @@ class PostFetcher:
     def _extract_slug(self, url: str) -> str:
         """Extract creator slug from Patreon URL."""
         # Handle various URL formats:
-        # https://www.patreon.com/c/millennialmage/posts
-        # https://www.patreon.com/millennialmage
-        # https://www.patreon.com/c/millennialmage
+        # https://www.patreon.com/c/example-creator/posts
+        # https://www.patreon.com/example-creator
+        # https://www.patreon.com/c/example-creator
         
         parsed = urlparse(url)
         path = parsed.path.strip('/')

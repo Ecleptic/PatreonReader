@@ -29,7 +29,7 @@ def main(creator_url, update, book_title, series_name, author_pattern, limit, ma
     Download and convert Patreon posts to EPUB format.
     
     CREATOR_URL: URL to the Patreon creator's posts page
-    (e.g., https://www.patreon.com/c/lunadea/posts)
+    (e.g., https://www.patreon.com/c/example-creator/posts)
     """
     auth = None
     try:

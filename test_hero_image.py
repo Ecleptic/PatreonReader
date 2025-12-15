@@ -5,7 +5,8 @@ import time
 auth = PatreonAuthSelenium(headless=False)
 auth.login()
 
-url = "https://www.patreon.com/c/zogarth/posts"
+# Replace with your creator URL
+url = "https://www.patreon.com/c/example-creator/posts"
 auth.driver.get(url)
 time.sleep(5)
 

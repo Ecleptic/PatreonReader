@@ -24,7 +24,8 @@ driver = webdriver.Chrome(service=service, options=chrome_options, desired_capab
 
 # Navigate to a Patreon page
 print("Loading Patreon page...")
-driver.get('https://www.patreon.com/c/zogarth/posts')
+# Replace with your creator URL
+driver.get('https://www.patreon.com/c/example-creator/posts')
 time.sleep(5)
 
 # Get performance logs

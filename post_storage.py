@@ -12,7 +12,7 @@ from dataclasses import dataclass, asdict
 class StoredPost:
     """Represents a stored Patreon post."""
     id: str  # Unique post ID from URL slug
-    creator_slug: str  # Creator identifier (e.g., "millennialmage")
+    creator_slug: str  # Creator identifier (e.g., "example-creator")
     title: str
     content: str  # HTML content
     url: str

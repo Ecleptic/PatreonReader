@@ -62,6 +62,24 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
+      - name: Restore signing key from secret
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android.keystore
+            echo "Using keystore from secret"
+          else
+            echo "No keystore secret found, generating new one"
+            keytool -genkeypair \
+              -alias patreonreader \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -keystore android.keystore \
+              -storepass ${{ secrets.KEYSTORE_PASSWORD || 'android' }} \
+              -keypass ${{ secrets.KEYSTORE_PASSWORD || 'android' }} \
+              -dname "CN=Patreon Reader, OU=Development, O=Ecleptic, L=Unknown, ST=Unknown, C=US"
+          fi
+
       - name: Update twa-manifest with version
         run: |
           VERSION="${{ steps.version.outputs.version }}"
@@ -73,18 +91,6 @@ jobs:
              '.appVersionName = $version | .appVersionCode = ($versionCode | tonumber)' \
              twa-manifest.json > twa-manifest-updated.json
           mv twa-manifest-updated.json twa-manifest.json
-
-      - name: Generate signing key
-        run: |
-          keytool -genkeypair \
-            -alias patreonreader \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -keystore android.keystore \
-            -storepass ${{ secrets.KEYSTORE_PASSWORD || 'android' }} \
-            -keypass ${{ secrets.KEYSTORE_PASSWORD || 'android' }} \
-            -dname "CN=Patreon Reader, OU=Development, O=Ecleptic, L=Unknown, ST=Unknown, C=US"
 
       - name: Initialize Bubblewrap project
         run: bubblewrap init --manifest twa-manifest.json --skipPwaValidation

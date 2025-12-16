@@ -1,5 +1,6 @@
 """Patreon authentication using Selenium for browser automation."""
 
+import os
 import time
 import pickle
 import json
@@ -11,8 +12,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 from config import Config
+
+# Try to import undetected-chromedriver for bot detection bypass
+try:
+    import undetected_chromedriver as uc
+    HAS_UNDETECTED = True
+except ImportError:
+    HAS_UNDETECTED = False
 
 
 # Import rate limiter
@@ -26,26 +35,64 @@ except ImportError:
 class PatreonAuthSelenium:
     """Handle Patreon authentication using Selenium."""
     
-    def __init__(self, headless: bool = True):
+    def __init__(self, headless: bool = True, use_undetected: bool = True):
         self.headless = headless
+        self.use_undetected = use_undetected and HAS_UNDETECTED
         self.driver = None
         self.authenticated = False
         self.cookies_file = Config.CACHE_DIR / 'patreon_cookies.pkl'
     
     def _init_driver(self):
         """Initialize Selenium WebDriver."""
+        # Try undetected-chromedriver first if available (better for bot detection bypass)
+        if self.use_undetected:
+            print("  Using undetected-chromedriver for bot detection bypass...")
+            try:
+                options = uc.ChromeOptions()
+                if self.headless:
+                    options.add_argument('--headless=new')
+                options.add_argument('--no-sandbox')
+                options.add_argument('--disable-dev-shm-usage')
+                options.add_argument('--disable-gpu')
+                options.add_argument('--window-size=1920,1080')
+                
+                # Use system chromium binary if available (Docker)
+                chromium_path = '/usr/bin/chromium'
+                if os.path.exists(chromium_path):
+                    options.binary_location = chromium_path
+                
+                self.driver = uc.Chrome(options=options, version_main=143)
+                return
+            except Exception as e:
+                print(f"  Warning: undetected-chromedriver failed ({e}), falling back to standard selenium")
+        
+        # Standard Selenium fallback
+        print("  Using standard Selenium ChromeDriver...")
         chrome_options = Options()
         if self.headless:
             chrome_options.add_argument('--headless=new')
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--ignore-certificate-errors')
+        chrome_options.add_argument('--ignore-ssl-errors')
+        chrome_options.add_argument('--disable-web-security')
+        chrome_options.add_argument('--window-size=1920,1080')
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+        chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
         chrome_options.add_argument(f'user-agent={Config.USER_AGENT}')
         
         # Enable performance logging to capture network requests
         chrome_options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
         
-        # Initialize driver
-        service = Service(ChromeDriverManager().install())
+        # Use system chromedriver if available (e.g., in Docker), otherwise use webdriver-manager
+        chromedriver_path = os.environ.get('CHROMEDRIVER_PATH', '/usr/bin/chromedriver')
+        if os.path.exists(chromedriver_path):
+            service = Service(chromedriver_path)
+        else:
+            service = Service(ChromeDriverManager().install())
+        
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
     
     def login(self, email: Optional[str] = None, password: Optional[str] = None, 
@@ -64,12 +111,21 @@ class PatreonAuthSelenium:
         email = email or Config.PATREON_EMAIL
         password = password or Config.PATREON_PASSWORD
         
-        if not email or not password:
-            raise ValueError("Email and password are required")
-        
         # Initialize driver
         if not self.driver:
             self._init_driver()
+        
+        # Check for manual session cookie first
+        session_cookie = Config.PATREON_SESSION
+        if session_cookie:
+            print("  Using manual session cookie from PATREON_SESSION...")
+            if self._login_with_session_cookie(session_cookie):
+                return True
+            else:
+                print("  Manual session cookie failed, trying normal login...")
+        
+        if not email or not password:
+            raise ValueError("Email and password are required (or set PATREON_SESSION cookie)")
         
         try:
             # Try cached cookies first
@@ -89,34 +145,55 @@ class PatreonAuthSelenium:
             # Fresh login
             print("  Opening login page...")
             self.driver.get('https://www.patreon.com/login')
-            time.sleep(4)  # Wait for page to fully load
+            time.sleep(5)  # Wait for page to fully load
             
             # Wait for and enter email
             print("  Entering email...")
             try:
-                email_field = WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, 'input[type="email"]'))
+                email_field = WebDriverWait(self.driver, 15).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, 'input[type="email"]'))
                 )
+                time.sleep(1)
                 email_field.clear()
-                email_field.send_keys(email)
+                # Type slowly to trigger validation
+                for char in email:
+                    email_field.send_keys(char)
+                    time.sleep(0.05)
                 time.sleep(2)
                 
-                # Click continue button to reveal password field
-                print("  Continuing to password...")
-                continue_button = WebDriverWait(self.driver, 5).until(
-                    EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[type="submit"]'))
-                )
-                continue_button.click()
-                time.sleep(3)  # Wait for password field to appear
+                # Patreon uses a single-page login where password is hidden until email is validated
+                # Use JavaScript to reveal the password section and enable the form
+                print("  Revealing password section via JavaScript...")
+                self.driver.execute_script("""
+                    // Remove aria-hidden from password section
+                    var hiddenSections = document.querySelectorAll('[aria-hidden="true"]');
+                    hiddenSections.forEach(function(el) {
+                        el.setAttribute('aria-hidden', 'false');
+                        el.style.display = 'block';
+                    });
+                    // Enable all disabled buttons
+                    var buttons = document.querySelectorAll('button[aria-disabled="true"]');
+                    buttons.forEach(function(btn) {
+                        btn.removeAttribute('aria-disabled');
+                        btn.disabled = false;
+                    });
+                """)
+                time.sleep(1)
                 
-                # Enter password
+                # Now find and fill the password field
                 print("  Entering password...")
                 password_field = WebDriverWait(self.driver, 10).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, 'input[type="password"]'))
                 )
                 password_field.clear()
-                password_field.send_keys(password)
-                time.sleep(1)
+                for char in password:
+                    password_field.send_keys(char)
+                    time.sleep(0.05)
+                time.sleep(2)
+                
+                # Submit the form by pressing Enter on the password field
+                print("  Submitting login form via Enter key...")
+                password_field.send_keys(Keys.RETURN)
                 
             except Exception as e:
                 print(f"  Error during form interaction: {e}")
@@ -125,13 +202,13 @@ class PatreonAuthSelenium:
                     f.write(self.driver.page_source)
                 raise
             
-            # Submit form
-            print("  Submitting login form...")
-            submit_button = self.driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]')
-            submit_button.click()
-            
             # Wait for redirect (either to home or 2FA page)
-            time.sleep(5)
+            time.sleep(8)
+            
+            # Save current page for debugging
+            print(f"  Current URL after login: {self.driver.current_url}")
+            with open(Config.CACHE_DIR / 'after_login.html', 'w') as f:
+                f.write(self.driver.page_source)
             
             # Check for 2FA
             current_url = self.driver.current_url
@@ -148,6 +225,9 @@ class PatreonAuthSelenium:
                 return True
             else:
                 print("✗ Login failed: Could not verify authentication")
+                # Save failed page for debugging
+                with open(Config.CACHE_DIR / 'login_failed.html', 'w') as f:
+                    f.write(self.driver.page_source)
                 return False
                 
         except Exception as e:
@@ -176,6 +256,66 @@ class PatreonAuthSelenium:
         except:
             return False
     
+    def _login_with_session_cookie(self, session_cookie: str) -> bool:
+        """
+        Login using a manually obtained session cookie.
+        
+        The session cookie can be obtained by:
+        1. Logging in to Patreon in your browser
+        2. Opening Developer Tools (F12)
+        3. Going to Application > Cookies > patreon.com
+        4. Copying the value of the 'session_id' cookie
+        
+        Args:
+            session_cookie: The session_id cookie value from Patreon
+            
+        Returns:
+            True if login successful, False otherwise
+        """
+        try:
+            print("  Setting up session cookie authentication...")
+            
+            # First, navigate to patreon.com to set the domain
+            self.driver.get('https://www.patreon.com')
+            time.sleep(2)
+            
+            # Add the session cookie
+            # Patreon uses 'session_id' as the cookie name
+            cookie_dict = {
+                'name': 'session_id',
+                'value': session_cookie,
+                'domain': '.patreon.com',
+                'path': '/',
+                'secure': True,
+                'httpOnly': True
+            }
+            
+            try:
+                self.driver.add_cookie(cookie_dict)
+            except Exception as e:
+                print(f"  Warning: Could not add session cookie: {e}")
+                # Try without httpOnly (some versions of selenium don't support it)
+                cookie_dict.pop('httpOnly', None)
+                self.driver.add_cookie(cookie_dict)
+            
+            # Refresh the page to apply the cookie
+            self.driver.get('https://www.patreon.com/home')
+            time.sleep(3)
+            
+            # Check if we're logged in
+            if self._is_logged_in():
+                self.authenticated = True
+                self._save_cookies()
+                print("✓ Successfully authenticated with Patreon (session cookie)")
+                return True
+            else:
+                print("  Session cookie authentication failed - cookie may be expired")
+                return False
+                
+        except Exception as e:
+            print(f"  Session cookie login error: {e}")
+            return False
+
     def _save_cookies(self):
         """Save session cookies to file."""
         try:

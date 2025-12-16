@@ -3,7 +3,7 @@
   "host": "example.com",
   "name": "Patreon Reader",
   "launcherName": "PatreonReader",
-  "display": "standalone",
+  "display": "fullscreen",
   "themeColor": "#1a1a2e",
   "navigationColor": "#1a1a2e",
   "navigationColorDark": "#1a1a2e",
@@ -40,7 +40,7 @@
   "isChromeOSOnly": false,
   "isMetaQuest": false,
   "fullScopeUrl": "https://example.com/",
-  "minSdkVersion": 19,
+  "minSdkVersion": 21,
   "orientation": "any",
   "fingerprints": []
 }

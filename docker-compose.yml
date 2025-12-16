@@ -5,14 +5,22 @@ services:
     restart: unless-stopped
     ports:
       - "${PORT:-8085}:8000"
+    env_file:
+      - .env
     environment:
       - APP_URL=${APP_URL:-}
       - API_TOKEN=${API_TOKEN:-}
       - PATREON_SESSION=${PATREON_SESSION:-}
+      - PATREON_EMAIL=${PATREON_EMAIL:-}
+      - PATREON_PASSWORD=${PATREON_PASSWORD:-}
+      - OUTPUT_DIR=${OUTPUT_DIR:-./output}
+      - CACHE_DIR=${CACHE_DIR:-./cache}
       - SYNC_INTERVAL_HOURS=${SYNC_INTERVAL_HOURS:-2}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - TZ=${TZ:-UTC}
     volumes:
+      # Mount settings file
+      - ./settings.json:/app/settings.json:ro
       # Persist database
       - patreon_data:/app/data
       # Optional: mount session cache for Patreon auth persistence

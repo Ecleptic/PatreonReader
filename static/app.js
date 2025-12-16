@@ -469,6 +469,11 @@ async function selectCreator(slug) {
     state.posts = [];
     state.postsOffset = 0;
     
+    // Update creator header
+    document.getElementById('creator-name').textContent = state.currentCreator.name;
+    document.getElementById('creator-post-count').textContent = `${state.currentCreator.post_count} posts`;
+    document.getElementById('creator-saved-count').textContent = 'Checking saved...';
+    
     showView('posts');
     await loadPosts();
 }
@@ -497,6 +502,9 @@ async function loadPosts(append = false) {
         }
         
         renderPosts();
+        
+        // Check if posts are already saved and update button state
+        checkAllPostsSaved();
     } catch (error) {
         console.error('Failed to load posts:', error);
     }
@@ -638,6 +646,101 @@ async function toggleOfflinePost() {
     } catch (error) {
         console.error('Failed to toggle offline status:', error);
         showToast('Failed to update offline storage', 'error');
+    }
+}
+
+/* ============================================================================
+   Save All Posts for Offline
+   ============================================================================ */
+
+let saveAllInProgress = false;
+
+async function saveAllPosts() {
+    if (!state.currentCreator || saveAllInProgress) return;
+    
+    const btn = document.getElementById('save-all-btn');
+    const icon = document.getElementById('save-all-icon');
+    const text = document.getElementById('save-all-text');
+    
+    saveAllInProgress = true;
+    btn.disabled = true;
+    icon.textContent = '⏳';
+    text.textContent = 'Saving...';
+    
+    try {
+        const creatorSlug = state.currentCreator.slug;
+        let saved = 0;
+        let total = state.posts.length;
+        
+        for (const postSummary of state.posts) {
+            // Check if already saved
+            const isOffline = await isPostOffline(creatorSlug, postSummary.id);
+            if (isOffline) {
+                saved++;
+                continue;
+            }
+            
+            // Fetch full post content
+            try {
+                const post = await api(`/api/posts/${creatorSlug}/${encodeURIComponent(postSummary.id)}?mark_read=false`);
+                await savePostOffline(post);
+                saved++;
+                text.textContent = `${saved}/${total}`;
+            } catch (error) {
+                console.error(`Failed to save post ${postSummary.id}:`, error);
+            }
+        }
+        
+        icon.textContent = '✓';
+        text.textContent = 'Saved';
+        btn.classList.add('all-saved');
+        showToast(`Saved ${saved} posts for offline reading`, 'success');
+    } catch (error) {
+        console.error('Failed to save all posts:', error);
+        showToast('Failed to save posts', 'error');
+        icon.textContent = '↓';
+        text.textContent = 'Save All';
+    } finally {
+        saveAllInProgress = false;
+        btn.disabled = false;
+    }
+}
+
+async function checkAllPostsSaved() {
+    if (!state.currentCreator || state.posts.length === 0) return;
+    
+    const btn = document.getElementById('save-all-btn');
+    const icon = document.getElementById('save-all-icon');
+    const text = document.getElementById('save-all-text');
+    const savedCountEl = document.getElementById('creator-saved-count');
+    
+    if (!btn) return;
+    
+    const creatorSlug = state.currentCreator.slug;
+    let savedCount = 0;
+    
+    for (const post of state.posts) {
+        const isOffline = await isPostOffline(creatorSlug, post.id);
+        if (isOffline) savedCount++;
+    }
+    
+    // Update header stats
+    if (savedCountEl) {
+        savedCountEl.textContent = `${savedCount} saved`;
+    }
+    
+    if (savedCount === state.posts.length && savedCount > 0) {
+        icon.textContent = '✓';
+        text.textContent = 'All Saved';
+        btn.classList.add('all-saved');
+    } else if (savedCount > 0) {
+        icon.textContent = '↓';
+        text.textContent = `Save All`;
+        btn.classList.remove('all-saved');
+    } else {
+        icon.textContent = '↓';
+        text.textContent = 'Save All';
+        btn.classList.remove('all-saved');
     }
 }
 

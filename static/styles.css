@@ -3,8 +3,8 @@
    ============================================================================ */
 
 :root {
-    --primary: #f96854;
-    --primary-dark: #e5533d;
+    --primary: #14b8a6;
+    --primary-dark: #0d9488;
     --bg: #1a1a2e;
     --bg-card: #16213e;
     --bg-elevated: #1f2937;
@@ -208,10 +208,13 @@ body {
     position: sticky;
     top: 0;
     z-index: 10;
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }
 
 .search-bar input {
-    width: 100%;
+    flex: 1;
     padding: 12px 16px;
     background: var(--bg-elevated);
     border: 1px solid var(--border);
@@ -229,6 +232,87 @@ body {
 
 .search-bar input::placeholder {
     color: var(--text-muted);
+}
+
+/* Creator Header */
+.creator-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+    border-radius: var(--radius);
+}
+
+.creator-info h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.creator-stats {
+    font-size: 13px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.stat-divider {
+    opacity: 0.5;
+}
+
+.creator-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Action Buttons (Save All, etc.) */
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.action-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.action-btn:disabled:hover {
+    background: var(--bg-elevated);
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.action-btn.all-saved {
+    background: var(--success);
+    border-color: var(--success);
+    color: #fff;
+}
+
+.action-btn.all-saved:hover {
+    background: var(--success);
+    opacity: 0.9;
 }
 
 /* ============================================================================

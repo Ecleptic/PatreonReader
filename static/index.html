@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#f96854">
+    <meta name="theme-color" content="#14b8a6">
     <meta name="description" content="Read your Patreon posts offline">
     
     <!-- PWA Manifest -->
@@ -62,6 +62,23 @@
 
             <!-- Posts List View -->
             <div id="view-posts" class="view">
+                <!-- Creator Info Header -->
+                <div id="creator-header" class="creator-header">
+                    <div class="creator-info">
+                        <h2 id="creator-name"></h2>
+                        <div class="creator-stats">
+                            <span id="creator-post-count"></span>
+                            <span class="stat-divider">•</span>
+                            <span id="creator-saved-count"></span>
+                        </div>
+                    </div>
+                    <div class="creator-actions">
+                        <button id="save-all-btn" class="action-btn" onclick="saveAllPosts()" title="Save all posts for offline reading">
+                            <span id="save-all-icon">↓</span>
+                            <span id="save-all-text">Save All</span>
+                        </button>
+                    </div>
+                </div>
                 <div class="search-bar">
                     <input type="text" id="post-search" placeholder="Search posts..." oninput="searchPosts()">
                 </div>

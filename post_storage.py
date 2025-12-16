@@ -291,9 +291,9 @@ class PostStorage:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
-            # Get current post's published_date
+            # Get current post's published_date and fetched_at
             cursor.execute('''
-                SELECT published_date FROM posts 
+                SELECT published_date, fetched_at FROM posts 
                 WHERE id = ? AND creator_slug = ?
             ''', (post_id, creator_slug))
             row = cursor.fetchone()
@@ -301,24 +301,44 @@ class PostStorage:
                 return {"prev": None, "next": None}
             
             current_date = row[0]
+            current_fetched = row[1]
             
-            # Get previous post (older - earlier date)
-            cursor.execute('''
-                SELECT id FROM posts 
-                WHERE creator_slug = ? AND published_date < ?
-                ORDER BY published_date DESC
-                LIMIT 1
-            ''', (creator_slug, current_date))
-            prev_row = cursor.fetchone()
-            
-            # Get next post (newer - later date)
-            cursor.execute('''
-                SELECT id FROM posts 
-                WHERE creator_slug = ? AND published_date > ?
-                ORDER BY published_date ASC
-                LIMIT 1
-            ''', (creator_slug, current_date))
-            next_row = cursor.fetchone()
+            # Use published_date if available, otherwise use fetched_at
+            if current_date:
+                # Get previous post (older - earlier date)
+                cursor.execute('''
+                    SELECT id FROM posts 
+                    WHERE creator_slug = ? AND published_date < ?
+                    ORDER BY published_date DESC
+                    LIMIT 1
+                ''', (creator_slug, current_date))
+                prev_row = cursor.fetchone()
+                
+                # Get next post (newer - later date)
+                cursor.execute('''
+                    SELECT id FROM posts 
+                    WHERE creator_slug = ? AND published_date > ?
+                    ORDER BY published_date ASC
+                    LIMIT 1
+                ''', (creator_slug, current_date))
+                next_row = cursor.fetchone()
+            else:
+                # Fallback: use row order based on fetched_at
+                cursor.execute('''
+                    SELECT id FROM posts 
+                    WHERE creator_slug = ? AND fetched_at < ?
+                    ORDER BY fetched_at DESC
+                    LIMIT 1
+                ''', (creator_slug, current_fetched))
+                prev_row = cursor.fetchone()
+                
+                cursor.execute('''
+                    SELECT id FROM posts 
+                    WHERE creator_slug = ? AND fetched_at > ?
+                    ORDER BY fetched_at ASC
+                    LIMIT 1
+                ''', (creator_slug, current_fetched))
+                next_row = cursor.fetchone()
             
             return {
                 "prev": prev_row[0] if prev_row else None,

@@ -36,8 +36,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY *.py ./
 COPY static/ ./static/
 
-# Create data directory for SQLite and set permissions
-RUN mkdir -p /app/data && chown -R appuser:appuser /app
+# Create data and cache directories and set permissions
+RUN mkdir -p /app/data /app/cache && chown -R appuser:appuser /app
 
 # Switch to non-root user
 USER appuser

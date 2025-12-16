@@ -14,6 +14,7 @@ class Config:
     # Authentication
     PATREON_EMAIL = os.getenv('PATREON_EMAIL')
     PATREON_PASSWORD = os.getenv('PATREON_PASSWORD')
+    PATREON_SESSION = os.getenv('PATREON_SESSION')  # Manual session cookie for bypassing login
     
     # Directories
     OUTPUT_DIR = Path(os.getenv('OUTPUT_DIR', './output'))

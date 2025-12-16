@@ -4,6 +4,14 @@ A self-hosted web application to read and manage your Patreon posts offline. Fea
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
+## ⚠️ Disclaimer
+
+**This application is NOT a tool for piracy or illegally downloading content.**
+
+Patreon Reader is an alternative viewer for reading text content that you already have legitimate access to through your Patreon subscriptions. It provides a better reading experience with offline support, but requires you to be an active subscriber to access the content.
+
+I do not condone or promote piracy in any form. Please support the creators you enjoy by maintaining active subscriptions.
+
 ## Features
 
 - 📱 **Progressive Web App (PWA)** - Install on your phone, works offline
